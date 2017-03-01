@@ -1,0 +1,99 @@
+package cn._51app.stats.service;
+
+import java.util.List;
+import java.util.Map;
+
+import cn._51app.stats.domain.ActiveIdfa;
+import cn._51app.stats.domain.IdfaVo;
+
+/**
+ * @author Administrator
+ * 后台数据统计
+ */
+public interface StatsService {
+
+	/**
+	 * tengh 2015年9月8日 下午7:58:18
+	 * @throws Exception
+	 * TODO 处理所有日志统计文件  生成sql文件
+	 */
+	public void createStatsLog() throws Exception;
+
+	/**
+	 * tengh 2015年12月30日 下午8:22:13
+	 * @param ip 
+	 * @param uuid
+	 * @param idfa
+	 * TODO 插入idfa
+	 */
+
+	public void insertIdfa(IdfaVo idfaVo);
+
+	/**
+	 * tengh 2016年2月29日 上午10:47:23
+	 * @param appid
+	 * @param idfa
+	 * @param channel 
+	 * @return
+	 * TODO cpa回调
+	 */
+	public int appActive(String appid, String idfa, String channel);
+
+	/**
+	 * tengh 2016年3月4日 下午5:48:05
+	 * @param appid
+	 * @param idfa
+	 * TODO 第三方回调
+	 */
+	public void appFlagActive(String appid, String idfa);
+
+	/**
+	 * tengh 2016年3月8日 上午11:33:35
+	 * @param appid
+	 * @return
+	 * TODO 查询需要回调给第三方
+	 */
+	public String queryflagUrl(String appid);
+
+	/**
+	 * tengh 2016年4月21日 上午11:22:13
+	 * @param appid
+	 * @param idfa
+	 * @return
+	 * TODO 查询激活回调
+	 */
+	public String queryflagCallback(String appid, String idfa);
+
+	/**
+	 * tengh 2016年4月26日 下午2:17:53
+	 * @param activeIdfa
+	 * @return
+	 * TODO 验证idfa的有效性
+	 */
+	public boolean checkIdfa(ActiveIdfa activeIdfa);
+
+	/**
+	 * tengh 2016年6月29日 下午3:54:46
+	 * @param appid
+	 * @return
+	 * TODO 是否需要对赚零钱处理
+	 */
+	public String queryIsbaby(String appid,String idfa);
+
+	/**
+	 * tengh 2016年8月10日 下午8:28:16
+	 * @param flag
+	 * @return
+	 * TODO 查询渠道是不是积分墙
+	 */
+	public Map<String, Object> queryChannel(int flag);
+
+	/**
+	 * tengh 2016年9月14日 上午10:23:33
+	 * @param createDate
+	 * @return
+	 * TODO 查询记录信息给爱思回调
+	 */
+	public String queryIdfaInfo(String createDate);
+
+}

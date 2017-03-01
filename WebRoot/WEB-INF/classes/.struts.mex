@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Struts2Diagram version="2.0">
+  <package name="cmbc" location="0,0" size="0,0">
+    <action name="index" location="0,0" size="0,0">
+      <result name="success">
+        <resourceEdge source="success" routing="0" target="login.jsp" />
+      </result>
+    </action>
+    <action name="user_*" location="0,0" size="0,0">
+      <result name="toIndex" />
+      <result name="toNewIndex" />
+      <result name="index" />
+      <result name="list" />
+      <result name="toList" />
+      <result name="setting" />
+      <result name="app" />
+    </action>
+    <action name="func_*" location="0,0" size="0,0">
+      <result name="list" />
+      <result name="toList" />
+    </action>
+    <action name="resource_*" location="0,0" size="0,0">
+      <result name="list" />
+      <result name="toList" />
+      <result name="quote" />
+      <result name="video" />
+      <result name="voice" />
+    </action>
+    <action name="info_*" location="0,0" size="0,0">
+      <result name="list" />
+    </action>
+    <action name="commune_*" location="0,0" size="0,0">
+      <result name="list" />
+      <result name="son" />
+    </action>
+    <action name="serving_*" location="0,0" size="0,0">
+      <result name="detail" />
+    </action>
+    <action name="ad_*" location="0,0" size="0,0">
+      <result name="list" />
+    </action>
+    <action name="sort_*" location="0,0" size="0,0">
+      <result name="list" />
+    </action>
+    <action name="company_*" location="0,0" size="0,0">
+      <result name="list" />
+      <result name="top" />
+      <result name="recommend" />
+    </action>
+    <action name="member_activity_*" location="0,0" size="0,0">
+      <result name="list" />
+      <result name="top" />
+    </action>
+  </package>
+  <package name="json" location="0,0" size="0,0">
+    <action name="user_*" location="0,0" size="0,0">
+      <result name="success" />
+    </action>
+    <action name="func_*" location="0,0" size="0,0">
+      <result name="success" />
+    </action>
+    <action name="resource_*" location="0,0" size="0,0">
+      <result name="success" />
+    </action>
+    <action name="info_*" location="0,0" size="0,0">
+      <result name="success" />
+    </action>
+    <action name="commune_*" location="0,0" size="0,0">
+      <result name="success" />
+    </action>
+    <action name="serving_*" location="0,0" size="0,0">
+      <result name="success" />
+    </action>
+    <action name="ad_*" location="0,0" size="0,0">
+      <result name="success" />
+    </action>
+    <action name="sort_*" location="0,0" size="0,0">
+      <result name="success" />
+    </action>
+    <action name="company_*" location="0,0" size="0,0">
+      <result name="success" />
+    </action>
+    <action name="member_activity_*" location="0,0" size="0,0">
+      <result name="success" />
+    </action>
+  </package>
+  <webResource name="login.jsp" path="login.jsp" location="0,0" size="0,0" />
+</Struts2Diagram>
+

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<configuration>
+	<substitutionProperty name="log.base" value="../logs/51app" />
+
+	<jmxConfigurator />
+
+	<appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+		<layout class="ch.qos.logback.classic.PatternLayout">
+			<!-- 上线时要去掉 "行:%line" 因为会影响性能 -->
+			<pattern>%date{yyyy-MM-dd hh:mm} [%thread] %-5level %logger{80} -
+				method:%method %msg 行:%line%n</pattern>
+		</layout>
+	</appender>
+	<appender name="logfile"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<Encoding>GBK</Encoding>
+		<File>${log.base}.log</File>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${log.base}.%d{yyyy-MM-dd}.log.zip</FileNamePattern>
+		</rollingPolicy>
+
+		<layout class="ch.qos.logback.classic.PatternLayout">
+			<pattern>%date{yyyy-MM-dd hh:mm} %-5level %logger{80} - %msg%n
+			</pattern>
+		</layout>
+	</appender>
+	<!-- 写入到数据库
+	<appender name="DB" class="ch.qos.logback.classic.db.DBAppender">
+		<connectionSource class="ch.qos.logback.core.db.DataSourceConnectionSource">
+			<dataSource class="com.mchange.v2.c3p0.ComboPooledDataSource">
+				<driverClass>com.mysql.jdbc.Driver</driverClass>
+				<jdbcUrl>jdbc:mysql://localhost:3306/db</jdbcUrl>
+				<user>root</user>
+				<password>root</password>
+			</dataSource>
+		</connectionSource>
+	</appender>
+	 -->
+	<logger name="cn._51app">
+		<level value="debug" />
+	</logger>
+	<!--
+		<logger name="org.apache.struts2"> <level value="WARN" /> </logger>
+		<logger name="com.opensymphony.xwork2"> <level value="WARN" />
+		</logger>
+	-->
+	<root>
+		<level value="info" />
+		<appender-ref ref="stdout" />
+		<appender-ref ref="logfile" />
+		<!-- <appender-ref ref="DB" /> -->
+	</root>
+</configuration>
+

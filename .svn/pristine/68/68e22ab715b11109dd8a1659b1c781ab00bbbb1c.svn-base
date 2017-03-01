@@ -1,0 +1,394 @@
+package cn._51app.stats.service;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.protocol.HTTP;
+import org.apache.log4j.Logger;
+
+import cn._51app.stats.base.BaseOcs;
+import cn._51app.stats.dao.LogDao;
+import cn._51app.stats.domain.Device;
+import cn._51app.stats.domain.DeviceDay;
+import cn._51app.stats.util.DateUtil;
+import cn._51app.stats.util.HttpUtils;
+import cn._51app.stats.util.JSONUtil;
+import cn._51app.stats.util.LoggerUtils;
+import cn._51app.stats.util.YzSignUtils;
+import net.sf.json.JSONObject;
+
+/**
+ * 数据统计业务逻辑处理
+ * 
+ * @author jonny
+ * 
+ */
+public class LogServiceImpl extends BaseOcs implements LogService {
+	
+	private Logger successIdfalogger=Logger.getLogger("loggerloggerIdfaSuccessAppenderLogger"); //idfa成功
+	private Logger failIdfalogger=Logger.getLogger("loggerloggerIdfaErrorAppenderLogger"); //idfa失败
+	private Logger recoedIdfalogger=Logger.getLogger("loggerIdfaRecordAppenderLogger"); //发送url 记录 
+	private Logger nologgerIdfaRecord=Logger.getLogger("nologgerIdfaRecordAppenderLogger"); // 发送空idfa记录
+
+	private LogDao logDao;
+
+	public LogDao getLogDao() {
+		return logDao;
+	}
+
+	public void setLogDao(LogDao logDao) {
+		this.logDao = logDao;
+	}
+
+	/**
+	 * 保存设备日志和统计数据
+	 * 
+	 * @param device
+	 */
+	@Override
+	@SuppressWarnings("unchecked")
+	public void saveDevice(Device device) {
+		// 记录设备访问日志到日志文件
+		LoggerUtils.logDeviceAction(device);
+		if (StringUtils.isEmpty(device.getUuid())
+				|| StringUtils.isEmpty(device.getModel())
+				|| StringUtils.isEmpty(device.getIos())
+				|| StringUtils.isEmpty(device.getVersion())
+				|| device.getType() < 1) {
+			return;
+		}
+		int cid = device.getCid(), model = 0, ios = 0, version = 0;
+		// 设备型号列表
+		String key = "m_k";
+		List<Map<String, Object>> models = (List<Map<String, Object>>) get(key);
+		if (models == null) {
+			models = logDao.getModels();
+			// 设置缓存
+			set(key, models, 0);
+		}
+		for (Map<String, Object> m : models) {
+			if (((String) m.get("model")).equals(device.getModel())) {
+				model = (Integer) m.get("id");
+				break;
+			}
+		}
+		if (model == 0) {// 保存设备型号信息
+			model = logDao
+					.saveDeviceModel(device.getModel(), device.getModel());
+			// 删除缓存
+			delete(key);
+		}
+		// ios版本列表
+		key = "i_k";
+		List<Map<String, Object>> iosVersions = (List<Map<String, Object>>) get(key);
+		if (iosVersions == null) {
+			iosVersions = logDao.getIosVersions();
+			// 设置缓存
+			set(key, iosVersions, 0);
+		}
+		for (Map<String, Object> iosVersion : iosVersions) {
+			if (((String) iosVersion.get("code")).equals(device.getIos())) {
+				ios = (Integer) iosVersion.get("id");
+				break;
+			}
+		}
+		if (ios == 0) {// 保存ios版本信息
+			ios = logDao.saveIosVersion(device.getIos());
+			// 删除缓存
+			delete(key);
+		}
+		// 应用版本列表
+		key = "v_k_" + device.getType();
+		List<Map<String, Object>> versions = (List<Map<String, Object>>) get(key);
+		if (versions == null) {
+			versions = logDao.getVersions(device.getType());
+			// 设置缓存
+			set(key, versions, 0);
+		}
+		for (Map<String, Object> v : versions) {
+			if (((String) v.get("number")).equals(device.getVersion())) {
+				version = (Integer) v.get("id");
+				break;
+			}
+		}
+		if (version == 0) {// 保存ios版本信息
+			version = logDao.saveVersion(device.getVersion(), device.getType());
+			// 删除缓存
+			delete(key);
+		}
+		DeviceDay deviceDay = new DeviceDay();
+		deviceDay.setUuid(device.getUuid());
+		deviceDay.setType(device.getType());
+		String today = DateUtil.date2String(new Date(), "yyyy-MM-dd");
+		// 查询设备是否存在
+		Map<String, Object> d = logDao.getDevice(deviceDay);
+		if (d != null) {// 设备之前存在
+			// 修改设备信息
+			deviceDay.setId((Integer) d.get("id"));
+			deviceDay.setCid(cid);
+			deviceDay.setModel(model);
+			deviceDay.setIos(ios);
+			deviceDay.setVersion(version);
+			logDao.updateDevice(deviceDay);
+			if (!today.equals(DateUtil.date2String((Date) d.get("updateTime"),
+					"yyyy-MM-dd"))) {// 当天没有算过活跃
+				// 修改留存信息
+				deviceDay.setCid((Integer) d.get("cid"));
+				deviceDay.setModel((Integer) d.get("model"));
+				deviceDay.setIos((Integer) d.get("ios"));
+				deviceDay.setVersion((Integer) d.get("version"));
+				deviceDay.setCreateDay(DateUtil.date2String(
+						(Date) d.get("createTime"), "yyyy-MM-dd"));
+				long dayInterval = (DateUtil.formatDate(new Date(),
+						"yyyy-MM-dd").getTime() - DateUtil.formatDate(
+						(Date) d.get("createTime"), "yyyy-MM-dd").getTime())
+						/ (24 * 60 * 60 * 1000);
+				switch (new Long(dayInterval).intValue()) {
+				case 1:// 1天后登录
+					deviceDay.set_1dayRetention(1);
+					logDao.updateDeviceRetention(deviceDay);
+					break;
+				case 2:// 2天后登录
+					deviceDay.set_2dayRetention(1);
+					logDao.updateDeviceRetention(deviceDay);
+					break;
+				case 3:// 3天后登录
+					deviceDay.set_3dayRetention(1);
+					logDao.updateDeviceRetention(deviceDay);
+					break;
+				case 7:// 7天后登录
+					deviceDay.set_7dayRetention(1);
+					logDao.updateDeviceRetention(deviceDay);
+					break;
+				case 14:// 14天后登录
+					deviceDay.set_14dayRetention(1);
+					logDao.updateDeviceRetention(deviceDay);
+					break;
+				case 30:// 30天后登录
+					deviceDay.set_30dayRetention(1);
+					logDao.updateDeviceRetention(deviceDay);
+					break;
+				default:
+					break;
+				}
+				// 活跃用户+1
+				deviceDay.setActive(1);
+				deviceDay.setCreateDay(today);
+				// 保存设备数据统计
+				logDao.saveOrUpdateDeviceDay(deviceDay);
+			}
+		} else {
+			// 保存设备信息
+			deviceDay.setCid(cid);
+			deviceDay.setModel(model);
+			deviceDay.setIos(ios);
+			deviceDay.setVersion(version);
+			logDao.saveDevice(deviceDay);
+			// 新用户+1
+			deviceDay.set_new(1);
+			// 活跃用户+1
+			deviceDay.setActive(1);
+			deviceDay.setCreateDay(today);
+			// 保存设备数据统计
+			logDao.saveOrUpdateDeviceDay(deviceDay);
+		}
+	}
+
+	/**
+	 * 删除渠道缓存
+	 * 
+	 */
+	@Override
+	public void deleteChannelCache() {
+		String key = "c_k";
+		delete(key);
+	}
+
+	/**
+	 * 删除设备型号缓存
+	 * 
+	 */
+	@Override
+	public void deleteModelCache() {
+		String key = "m_k";
+		delete(key);
+	}
+
+	/**
+	 * 删除ios系统版本缓存
+	 * 
+	 */
+	@Override
+	public void deleteIosVersionCache() {
+		String key = "i_k";
+		delete(key);
+	}
+
+	/**
+	 * 删除应用版本缓存
+	 * 
+	 */
+	@Override
+	public void deleteVersionCache(int type) {
+		String key = "v_k_" + type;
+		delete(key);
+	}
+	
+	/**
+	 * tengh 2016年2月27日 下午4:27:14
+	 * @param appid
+	 * @param idfa
+	 * @param os
+	 * @param channel
+	 * TODO cpa来源统计
+	 */
+	@Override
+	public void saveDevice(String appid, String idfa, String os, Integer channel,String ip,String callback) {
+//		String appIdInfo=(String)get("cpa_appid_"+appid);
+//		if(StringUtils.isBlank(appIdInfo)){
+//			Map<String, Object> info=logDao.getCpaAppId(appid); //标识
+//			String param=(String)info.get("param");
+//			info.put("param", param==null?"":param);
+//			String flagUrl=(String)info.get("flagUrl");
+//			info.put("flagUrl", flagUrl==null?"":flagUrl);
+//			if(info!=null && info.size()>0){
+//				JSONObject jsonObject=JSONObject.fromObject(info);
+//				appIdInfo=jsonObject.toString();
+//				set("cpa_appid_"+appid, appIdInfo, 0);
+//			}
+//		}
+//		String appIdInfo=(String)get("cpa_appid_"+appid);
+		String param="",flagUrl="",url="";
+		Integer appid_id=null;
+		Integer status=0;
+//		if(StringUtils.isBlank(appIdInfo)){
+			Map<String, Object> info=logDao.getCpaAppId(appid); 
+			if(info!=null && info.size()>0){
+				param=(String)info.get("param");
+				flagUrl=(String)info.get("flagUrl");
+				appid_id=(Integer)info.get("id");
+				url=(String)info.get("url");
+				status=(Integer)info.get("status");
+//				info.put("param", param==null?"":param);
+//				info.put("flagUrl", flagUrl==null?"":flagUrl);
+//				info.put("url", url==null?"":url);
+//				info.put("status", status);
+//				appIdInfo=JSONUtil.convertObjectToJSON(info);
+//				set("cpa_appid_"+appid, appIdInfo, 0);
+			}
+//		}
+//		Map<String, Object> temMap=new HashMap<>();
+//		temMap=(Map<String, Object>)JSONUtil.convertJSONToObject(appIdInfo, Map.class);
+//		param=(String)temMap.get("param");
+//		flagUrl=(String)temMap.get("flagUrl");
+//		appid_id=(Integer)temMap.get("id");
+//		url=(String)temMap.get("url");
+//		status=(Integer)temMap.get("status");
+//		Map<String, Object> appInfo=(Map<String, Object>) JSONObject.fromObject(appIdInfo);
+//		String appid_id=String.valueOf(appInfo.get("id"));  //标识id
+//		String url="";
+		HashMap<String,String> reMap=null;
+		try {
+//			url=(String)appInfo.get("url");
+			if(StringUtils.isNotBlank(url)){
+				if(StringUtils.isNotBlank(param)){
+					if(!"sign".equals(param) && !param.startsWith("data")){
+						url+=idfa;
+					}
+					if("timestamp".equalsIgnoreCase(param)){
+						url+="&timestamp="+(System.currentTimeMillis()+"").substring(0, 10);
+					}else if("ip".equalsIgnoreCase(param.split("_")[0])){
+						if(param.split("_").length>1){
+							url+="&"+param.split("_")[1]+"="+ip;
+						}else{
+							url+="&ip="+ip;
+						}
+					}else if("callback".equalsIgnoreCase(param)){
+						String temUrl="http://ios.api.51app.cn/ios_appActive.action?appid="+appid+"&idfa="+idfa+"&rt=4";
+						url+="&ip="+ip+"&callback="+URLEncoder.encode(temUrl);
+					}else if("sign".equalsIgnoreCase(param)){
+						reMap=new HashMap<>();
+						reMap.put("idfa", idfa);
+						reMap.put("cid", "youqitech");
+						reMap.put("appid", appid);
+						reMap.put("times", System.currentTimeMillis()+"");
+						String sign=YzSignUtils.getSign(reMap);
+						reMap.put("sign", sign);
+					}else if("data".equalsIgnoreCase(param.split("_")[0])){
+						Map<String, Object> temData=new HashMap<>();
+						Map<String, Object> tem2Data=new HashMap<>();
+						tem2Data.put("from", param.split("_")[1]);
+						tem2Data.put("idfa", idfa);
+						temData.put("actiondata", tem2Data);
+						temData.put("cateid", "10");
+						JSONObject jsonObject=JSONObject.fromObject(temData);
+						String dataValue=URLEncoder.encode(jsonObject.toString());
+						url+=dataValue;
+					}
+				}else{
+					url+=idfa;
+				}
+				recoedIdfalogger.info(url);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		//保存数据
+		int result=0;
+		result=logDao.insertCpaInfo(appid_id,idfa,os,channel,ip,callback);
+		String responseResult="";
+		if(result>0 && StringUtils.isNotBlank(url) && reMap==null && status==1){
+			//发送记录请求
+			try {
+				responseResult=HttpUtils.get(url, null,5,HTTP.UTF_8);
+			} catch (Exception e) {
+				try {
+					responseResult=HttpUtils.get(url, null,5,HTTP.UTF_8);
+				} catch (Exception e1) {
+				}
+			}
+			if(url.endsWith("=")){
+				nologgerIdfaRecord.info(url+"||||||idfa="+idfa);
+			}
+			successIdfalogger.info("url:"+url+"保存数据："+result+","+responseResult);
+		}else if(reMap!=null ){
+			String resMap="";
+			try {
+				resMap = HttpUtils.post(url, reMap, 5, "utf-8");
+//				System.err.println(resMap);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			Map<String, Object> resultInfo=(Map<String, Object>) JSONObject.fromObject(resMap);
+			if(StringUtils.isNotBlank(resMap) && Integer.parseInt(resultInfo.get("code").toString())==1){
+//				successIdfalogger.info("url:"+url+"保存数据："+resMap);
+			}
+		}
+//		if("0".equals(responseResult)){
+//			failIdfalogger.info("url:"+url+",返回:"+responseResult);
+//		}else if("1".equals(responseResult) || "success".equals(responseResult)){
+//			successIdfalogger.info("url:"+url+",返回:"+responseResult);
+//		}else{
+//			Map<String, Object> res=new HashMap<>();
+//			try {
+//				res=JSONObject.fromObject(responseResult.trim());
+//			} catch (Exception e) {
+//				failIdfalogger.info("url:"+url+",返回:"+responseResult);
+//			}
+//			String flag=(String)res.get("success");
+//			String message=(String)res.get("message");
+//			Integer ret=(Integer)res.get("ret");
+//			if("true".equals(flag) || 0==ret){
+//				successIdfalogger.info("url:"+url+",返回:"+responseResult);
+//			}else{
+//				failIdfalogger.info("url:"+url+",返回:"+responseResult);
+//			}
+//		}
+	}
+	
+}

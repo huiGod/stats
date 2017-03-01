@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans   
+	        http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
+
+	<bean id="logDao" class="cn._51app.stats.dao.LogDaoImpl">
+		<property name="statsJdbc" ref="statsJdbcTemplate" />
+	</bean>
+
+	<bean id="logService" class="cn._51app.stats.service.LogServiceImpl">
+		<property name="ocsClient" ref="ocsClient" />
+		<property name="logDao" ref="logDao" />
+	</bean>
+	
+	<bean id="logAndroidDao" class="cn._51app.stats.dao.LogAndroidDaoImpl">
+		<property name="statsJdbc" ref="statsJdbcTemplate" />
+	</bean>
+
+	<bean id="logAndroidService" class="cn._51app.stats.service.LogAndroidServiceImpl">
+		<property name="ocsClient" ref="ocsClient" />
+		<property name="logAndroidDao" ref="logAndroidDao" />
+	</bean>
+	
+	<bean id="statsDao" class="cn._51app.stats.dao.StatsDaoImpl">
+		<property name="statsJdbc" ref="statsJdbcTemplate" />
+	</bean>
+	
+	<bean id="statsService" class="cn._51app.stats.service.StatsServiceImpl">
+		<property name="ocsClient" ref="ocsClient" />
+		<property name="logDao" ref="logDao" />
+		<property name="statsDao" ref="statsDao" />
+	</bean>
+	
+	
+	
+</beans>

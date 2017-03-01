@@ -1,0 +1,141 @@
+package cn._51app.stats.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang.StringUtils;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+import cn._51app.stats.base.BaseDao;
+
+public class StatsDaoImpl extends BaseDao implements StatsDao {
+	private JdbcTemplate statsJdbc;
+	
+	
+	public JdbcTemplate getStatsJdbc() {
+		return statsJdbc;
+	}
+
+
+	public void setStatsJdbc(JdbcTemplate statsJdbc) {
+		this.statsJdbc = statsJdbc;
+	}
+
+
+	@Override
+	public List<Map<String, Object>> getDeviceModelsBySys(String sys) {
+		StringBuilder sql=new StringBuilder();
+		sql.append("SELECT `id`,`model` FROM ");
+		if("1".equals(sys)){
+			sql.append("`t_device_model`");
+		}else{
+			sql.append("`a_device_model`");
+		}
+		return this.statsJdbc.queryForList(sql.toString());
+	}
+	
+	@Override
+	public void insertIdfa(String uuid, String idfa,String appId,String ip) {
+		try {
+			this.statsJdbc.update("INSERT INTO `t_idfa` (`uuid`,`idfa`,`creatime`,`app_id`,`ip`) VALUES(?,?,NOW(),?,?) ",new Object[]{uuid,idfa,appId,ip});
+		} catch (Exception e) {
+		}
+	}
+	
+	@Override
+	public int getAppActive(String appid, String idfa,String channel) {
+		try {
+//			String sql="UPDATE `cpa_idfa` `ci` INNER JOIN `cpa_appid` `ca` ON `ci`.`appid`=`ca`.`id` SET `ci`.`status`=1,`ci`.`finishtime`=NOW() WHERE `ci`.`status`=0 AND `ca`.`appid`=? AND `ci`.`idfa`=?";
+			String sql="SELECT `ci`.`id` FROM `cpa_idfa` `ci` INNER JOIN `cpa_appid` `ca` ON `ci`.`appid`=`ca`.`id` WHERE `ci`.`status`=0 AND `ca`.`appid`=? AND `ci`.`idfa`=?"; 
+			if(StringUtils.isNotBlank(channel)){
+				sql+=" AND `ci`.`channel`="+channel;
+			}
+			sql+=" ORDER BY `ci`.`time` ASC LIMIT 1";
+			int cpaIdfaId=this.statsJdbc.queryForObject(sql, new Object[]{appid,idfa},Integer.class);
+			int result= this.statsJdbc.update("UPDATE `cpa_idfa` SET `status`=1,`finishtime`=NOW() WHERE `id`=?",new Object[]{cpaIdfaId});
+			System.err.println("getAppActive:"+result);
+			if(result>0){
+				return cpaIdfaId;
+			}else{
+				return 0;
+			}
+		} catch (Exception e) {
+			return 0;
+		}
+	}
+	
+	@Override
+	public Map<String, Object> queryChannel(int flag) {
+		return this.statsJdbc.queryForMap("SELECT `ci`.`channel`,`ca`.`level` FROM `cpa_idfa` `ci` INNER JOIN `cpa_appid` `ca` ON `ci`.`appid`=`ca`.`id` WHERE `ci`.`id`=?",new Object[]{flag});
+	}
+	
+	@Override
+	public void appFlagActive(String appid, String idfa) {
+		this.statsJdbc.update("UPDATE `cpa_idfa` `ci` INNER JOIN `cpa_appid` `ca` ON `ci`.`appid`=`ca`.`id` SET `ci`.`status_flag`=1 WHERE `ci`.`status_flag`=0 AND `ca`.`appid`=? AND `ci`.`idfa`=?",new Object[]{appid,idfa});
+	}
+	
+	@Override
+	public String queryflagCallback(String appid, String idfa) {
+		try {
+			return this.statsJdbc.queryForObject("SELECT `ci`.`callback` FROM `cpa_idfa` `ci` INNER JOIN `cpa_appid` `ca` ON `ci`.`appid`=`ca`.`id` WHERE  `ca`.`appid`=? AND `ci`.`idfa`=? ORDER BY `ci`.`time` ASC  LIMIT 1",new Object[]{appid,idfa}, String.class);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
+	@Override
+	public boolean checkIdfa(String idfa, String appId) {
+		try {
+			this.statsJdbc.queryForObject("SELECT `id` FROM `t_idfa` WHERE `idfa`=? AND `app_id`=? LIMIT 1",new Object[]{idfa,appId}, Integer.class);
+			return true;
+		} catch (Exception e) {
+		}
+		return false;
+	}
+	
+	@Override
+	public String queryIsbaby(String appid) {
+		try {
+			return this.statsJdbc.queryForObject("SELECT `isbaby` FROM `cpa_appid` WHERE `appid`=? LIMIT 1",new Object[]{appid}, String.class);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
+	@Override
+	public String queryAppleid(String appid) {
+		try {
+			return this.statsJdbc.queryForObject("SELECT `appleid` FROM `cpa_appid` WHERE `appid`=? LIMIT 1",new Object[]{appid}, String.class);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
+	@Override
+	public List<Map<String, Object>> queryIdfaInfo(String createDate) {
+		StringBuilder sql=new StringBuilder();
+		sql.append("SELECT `id`,`idfa`,`appid` FROM `cpa_idfa` WHERE (`appid`=6 OR `appid`=5 OR `appid`=2) AND `status`=0 AND `status_flag`=0 ");
+		if(StringUtils.isBlank(createDate)){//昨天的
+			sql.append("AND DATE_FORMAT(`time`,'%Y-%m-%d')<CURDATE() AND TIMESTAMPDIFF(DAY,DATE_FORMAT(`time`,'%Y-%m-%d'),CURDATE())=1");
+		}else{//传入当天的
+			sql.append("AND `time`>='"+createDate+" 00:00:00' AND `time`<='"+createDate+" 23:59:59'");
+		}
+		sql.append(" ORDER BY `appid` DESC");
+		return statsJdbc.queryForList(sql.toString());
+	}
+	
+	@Override
+	public void updateI4(Integer id) {
+		this.statsJdbc.update("UPDATE `cpa_idfa` SET `status_flag`=1 WHERE `id`=?",new Object[]{id});
+	}
+	
+	@Override
+	public int checkActiveIdfa(String idfa, String appid) {
+		try {
+			this.statsJdbc.queryForObject("SELECT `ci`.`id` FROM `cpa_idfa` `ci` INNER JOIN `cpa_appid` `ca` ON `ci`.`appid`=`ca`.`id` WHERE `ca`.`appleid`=? AND `ci`.`idfa`=? AND `ci`.`status`=1",new Object[]{appid,idfa}, Integer.class);
+			return 1;
+		} catch (Exception e) {
+			return 0;
+		}
+	}
+}

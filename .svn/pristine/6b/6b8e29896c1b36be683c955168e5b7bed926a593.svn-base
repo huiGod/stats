@@ -1,0 +1,99 @@
+package cn._51app.stats.dao;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * @author Administrator
+ * 数据统计
+ */
+public interface StatsDao {
+
+	/**
+	 * tengh 2015年9月9日 下午1:58:39
+	 * @param sys 根据系统查询所有设备缓存
+	 * @return
+	 * TODO
+	 */
+	List<Map<String, Object>> getDeviceModelsBySys(String sys);
+
+	/**
+	 * tengh 2015年12月30日 下午8:25:43
+	 * @param uuid
+	 * @param idfa
+	 * TODO
+	 * @param ip 
+	 */
+	void insertIdfa(String uuid, String idfa,String appId, String ip);
+
+	/**
+	 * tengh 2016年2月29日 上午10:49:41
+	 * @param appid
+	 * @param idfa
+	 * TODO cpa回调
+	 * @return 
+	 */
+	int getAppActive(String appid, String idfa,String channel);
+
+	/**
+	 * tengh 2016年3月4日 下午5:50:09
+	 * @param appid
+	 * @param idfa
+	 * @return
+	 * TODO 第三方回调
+	 */
+	void appFlagActive(String appid, String idfa);
+
+	/**
+	 * tengh 2016年4月21日 上午11:24:23
+	 * @param appid
+	 * @param idfa
+	 * @return
+	 * TODO 查询callback
+	 */
+	String queryflagCallback(String appid, String idfa);
+
+	/**
+	 * tengh 2016年4月26日 下午2:20:15
+	 * @param idfa
+	 * @param appId
+	 * @return
+	 * TODO 验证idfa的有效性
+	 */
+	boolean checkIdfa(String idfa, String appId);
+
+	/**
+	 * tengh 2016年6月29日 下午3:56:29
+	 * @param appid
+	 * @return
+	 * TODO 查询appleid
+	 */
+	String queryIsbaby(String appid);
+
+	String queryAppleid(String appid);
+
+	/**
+	 * tengh 2016年8月10日 下午8:28:45
+	 * @param flag
+	 * @return
+	 * TODO 查询是否是积分墙
+	 */
+	Map<String, Object> queryChannel(int flag);
+
+	/**
+	 * tengh 2016年9月14日 上午10:26:38
+	 * @param createDate
+	 * @return
+	 * TODO 查询约爱的信息
+	 */
+	List<Map<String, Object>> queryIdfaInfo(String createDate);
+
+	/**
+	 * tengh 2016年9月14日 上午11:04:55
+	 * @param idfa
+	 * @param appid
+	 * TODO 更新爱思结果
+	 */
+	void updateI4(Integer id);
+
+}

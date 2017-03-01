@@ -1,0 +1,13 @@
+# ocs properties
+ocs.host=192.168.1.247
+ocs.port=11211
+ocs.username=
+ocs.password=
+ocs.connectionPoolSize=5
+
+# ocs properties
+#ocs.host=c82a97e2e19e48c6.m.cnhzaliqshpub001.ocs.aliyuncs.com
+#ocs.port=11211
+#ocs.username=c82a97e2e19e48c6
+#ocs.password=Wcl20150312www51appcn
+#ocs.connectionPoolSize=5
